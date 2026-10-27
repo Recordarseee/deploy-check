@@ -3,42 +3,303 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>部署链路验证</title>
+<title>JSON 格式化 · 压缩 · 排序</title>
 <style>
-  :root { color-scheme: light dark; }
-  body {
-    margin: 0; min-height: 100vh;
-    display: grid; place-items: center;
-    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
-    background: #0f1115; color: #e6e8ee;
+  :root{
+    color-scheme: dark;
+    --bg:#0f1115; --panel:#171a21; --line:#262b36; --line-2:#333a48;
+    --fg:#e6e8ee; --muted:#8b94a7; --accent:#60a5fa; --ok:#4ade80; --err:#f87171;
+    --mono: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace;
   }
-  .card {
-    padding: 2.5rem 3rem; border-radius: 16px;
-    background: #171a21; border: 1px solid #262b36;
-    box-shadow: 0 20px 60px rgba(0,0,0,.45);
-    text-align: center; max-width: 32rem;
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    display:flex; flex-direction:column; min-height:100vh;
   }
-  h1 { margin: 0 0 .75rem; font-size: 1.5rem; letter-spacing: .02em; }
-  .ok { color: #4ade80; font-weight: 600; }
-  p { margin: .5rem 0; line-height: 1.7; color: #9aa3b2; font-size: .95rem; }
-  code {
-    background: #0f1115; padding: .15em .45em; border-radius: 5px;
-    color: #7dd3fc; font-size: .9em;
+  header{
+    padding:.9rem 1.25rem; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;
   }
+  header h1{font-size:.95rem; margin:0; font-weight:600; letter-spacing:.02em}
+  header .hint{font-size:.75rem; color:var(--muted)}
+
+  .bar{
+    padding:.7rem 1.25rem; border-bottom:1px solid var(--line);
+    display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;
+    background:var(--panel);
+  }
+  button, select{
+    font:inherit; font-size:.8rem; color:var(--fg);
+    background:#222835; border:1px solid var(--line-2); border-radius:7px;
+    padding:.4rem .7rem; cursor:pointer; transition:.15s;
+  }
+  button:hover, select:hover{border-color:#4a5468; background:#2a3142}
+  button:active{transform:translateY(1px)}
+  button.primary{background:#1d4ed8; border-color:#2563eb}
+  button.primary:hover{background:#2563eb}
+  .spacer{flex:1}
+
+  main{
+    flex:1; display:grid; grid-template-columns:1fr 1fr;
+    gap:1px; background:var(--line); min-height:0;
+  }
+  @media (max-width:820px){ main{grid-template-columns:1fr; grid-template-rows:1fr 1fr} }
+
+  .pane{display:flex; flex-direction:column; background:var(--bg); min-height:0}
+  .pane-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:.5rem .9rem; font-size:.75rem; color:var(--muted);
+    border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  textarea{
+    flex:1; width:100%; resize:none; border:0; outline:0;
+    background:var(--bg); color:var(--fg); padding:.9rem 1rem;
+    font-family:var(--mono); font-size:.82rem; line-height:1.6;
+    tab-size:2; white-space:pre; overflow:auto;
+  }
+  textarea::placeholder{color:#4b5567}
+
+  .status{
+    padding:.55rem 1.25rem; font-size:.78rem; border-top:1px solid var(--line);
+    display:flex; align-items:center; gap:.6rem; min-height:2.4rem;
+  }
+  .status.ok{color:var(--ok)} .status.err{color:var(--err); align-items:flex-start}
+  .status .msg{font-family:var(--mono); font-size:.76rem; white-space:pre-wrap; word-break:break-word}
+  .dot{width:.5rem;height:.5rem;border-radius:50%;background:currentColor;flex:none;margin-top:.35rem}
 </style>
 </head>
 <body>
-  <main class="card">
-    <h1><span class="ok">✓</span> 部署链路已打通</h1>
-    <p>这个页面出现在这里，说明：本地仓库 → GitHub → Pages 三段都通了。</p>
-    <p>接下来往里塞真正的东西就行。</p>
-    <p style="margin-top:1.5rem;font-size:.8rem;opacity:.6">
-      构建于 <code id="built">-</code>
-    </p>
-  </main>
-  <script>
-    document.getElementById('built').textContent =
-      new Date(document.lastModified).toLocaleString('zh-CN');
-  </script>
+
+<header>
+  <h1>JSON 工具</h1>
+  <span class="hint">格式化 · 压缩 · 排序 · 校验 —— 全程在浏览器本地完成，数据不上传</span>
+</header>
+
+<div class="bar">
+  <button class="primary" id="btnFormat" title="Ctrl + Enter">格式化</button>
+  <button id="btnMinify">压缩</button>
+  <button id="btnSort">键排序</button>
+  <select id="indent" title="缩进">
+    <option value="2">2 空格</option>
+    <option value="4">4 空格</option>
+    <option value="\t">Tab</option>
+  </select>
+  <span class="spacer"></span>
+  <button id="btnCopy">复制结果</button>
+  <button id="btnSwap" title="把结果放回输入">结果移到输入</button>
+  <button id="btnSample">示例</button>
+  <button id="btnClear">清空</button>
+</div>
+
+<main>
+  <section class="pane">
+    <div class="pane-head"><span>输入</span><span id="inStat">0 字符</span></div>
+    <textarea id="in" spellcheck="false" autocomplete="off"
+      placeholder='粘贴 JSON 到这里，例如：{"name":"Quinn","tags":["a","b"],"ok":true}'></textarea>
+  </section>
+  <section class="pane">
+    <div class="pane-head"><span>结果</span><span id="outStat">—</span></div>
+    <textarea id="out" spellcheck="false" readonly placeholder="格式化结果会出现在这里"></textarea>
+  </section>
+</main>
+
+<div class="status" id="status"><span class="dot"></span><span class="msg">就绪</span></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const elIn = $('in'), elOut = $('out'), elStatus = $('status');
+  const elInStat = $('inStat'), elOutStat = $('outStat'), elIndent = $('indent');
+
+  /* ---------- 状态提示 ---------- */
+  function say(kind, text) {
+    elStatus.className = 'status ' + kind;
+    elStatus.querySelector('.msg').textContent = text;
+  }
+
+  /* ---------- 统计 ---------- */
+  const bytes = (s) => new TextEncoder().encode(s).length;
+  function fmtBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(2) + ' MB';
+  }
+  function updateInStat() {
+    const v = elIn.value;
+    if (!v) { elInStat.textContent = '0 字符'; return; }
+    const lines = v.split('\n').length;
+    elInStat.textContent = lines + ' 行 · ' + fmtBytes(bytes(v));
+  }
+  function updateOutStat() {
+    const v = elOut.value;
+    if (!v) { elOutStat.textContent = '—'; return; }
+    const lines = v.split('\n').length;
+    elOutStat.textContent = lines + ' 行 · ' + fmtBytes(bytes(v));
+  }
+
+  /* ---------- 报错定位 ---------- */
+  function locate(text, pos) {
+    const before = text.slice(0, pos);
+    const line = before.split('\n').length;
+    const col = pos - before.lastIndexOf('\n');
+    return { line, col };
+  }
+
+  function describeError(e, text) {
+    const raw = String(e && e.message || e);
+
+    // 新引擎：... at position 42 (line 3 column 5)
+    let m = raw.match(/position\s+(\d+)\s*\(line\s+(\d+)\s+column\s+(\d+)\)/i);
+    if (m) return raw.replace(/\s*\(line[^)]*\)/i, '') + '（第 ' + m[2] + ' 行，第 ' + m[3] + ' 列）';
+
+    // 老引擎：... at position 42
+    m = raw.match(/position\s+(\d+)/i);
+    if (m) {
+      const p = locate(text, Number(m[1]));
+      return raw + '（第 ' + p.line + ' 行，第 ' + p.col + ' 列附近）';
+    }
+    return raw;
+  }
+
+  /* ---------- 排序键 ---------- */
+  function sortKeys(v) {
+    if (Array.isArray(v)) return v.map(sortKeys);
+    if (v && typeof v === 'object') {
+      const out = {};
+      Object.keys(v).sort().forEach((k) => { out[k] = sortKeys(v[k]); });
+      return out;
+    }
+    return v;
+  }
+
+  /* ---------- 核心 ---------- */
+  function parse() {
+    const text = elIn.value.trim();
+    if (!text) { say('err', '输入是空的'); return null; }
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      say('err', '解析失败：' + describeError(e, elIn.value));
+      elOut.value = '';
+      updateOutStat();
+      return null;
+    }
+  }
+
+  function emit(value, indent) {
+    const s = JSON.stringify(value, null, indent);
+    elOut.value = s;
+    updateOutStat();
+    const saved = bytes(elIn.value) - bytes(s);
+    const pct = bytes(elIn.value) ? Math.round(saved / bytes(elIn.value) * 100) : 0;
+    if (saved > 0) say('ok', '完成 · 省下 ' + fmtBytes(saved) + '（' + pct + '%）');
+    else if (saved < 0) say('ok', '完成 · 增加了 ' + fmtBytes(-saved));
+    else say('ok', '完成 · 大小不变');
+  }
+
+  /* ---------- 动作 ---------- */
+  function doFormat() {
+    const v = parse();
+    if (v === null) return;
+    const ind = elIndent.value === '\\t' ? '\t' : Number(elIndent.value);
+    emit(v, ind);
+  }
+
+  function doMinify() {
+    const v = parse();
+    if (v === null) return;
+    emit(v, 0);
+  }
+
+  function doSort() {
+    const v = parse();
+    if (v === null) return;
+    const ind = elIndent.value === '\\t' ? '\t' : Number(elIndent.value);
+    emit(sortKeys(v), ind);
+    say('ok', '已按字母序重排所有键');
+  }
+
+  async function doCopy() {
+    if (!elOut.value) { say('err', '没有可复制的内容'); return; }
+    try {
+      await navigator.clipboard.writeText(elOut.value);
+      say('ok', '已复制到剪贴板（' + fmtBytes(bytes(elOut.value)) + '）');
+    } catch (_) {
+      elOut.select();
+      document.execCommand('copy');
+      say('ok', '已复制（走兼容路径）');
+    }
+  }
+
+  function doSwap() {
+    if (!elOut.value) { say('err', '结果为空，没东西可移'); return; }
+    elIn.value = elOut.value;
+    updateInStat();
+    elOut.value = '';
+    updateOutStat();
+    say('ok', '已移到输入框');
+  }
+
+  const SAMPLE = {
+    name: 'Quinn',
+    role: 'builder',
+    tags: ['json', 'tool', 'static-site'],
+    nested: { z: 1, a: [{ y: 2, x: 3 }] },
+    enabled: true,
+    note: '点「键排序」看嵌套键被重排'
+  };
+
+  function doSample() {
+    elIn.value = JSON.stringify(SAMPLE);
+    updateInStat();
+    doFormat();
+  }
+
+  function doClear() {
+    elIn.value = ''; elOut.value = '';
+    updateInStat(); updateOutStat();
+    say('ok', '已清空');
+  }
+
+  /* ---------- 绑定 ---------- */
+  $('btnFormat').addEventListener('click', doFormat);
+  $('btnMinify').addEventListener('click', doMinify);
+  $('btnSort').addEventListener('click', doSort);
+  $('btnCopy').addEventListener('click', doCopy);
+  $('btnSwap').addEventListener('click', doSwap);
+  $('btnSample').addEventListener('click', doSample);
+  $('btnClear').addEventListener('click', doClear);
+  elIndent.addEventListener('change', () => { if (elOut.value) doFormat(); });
+  elIn.addEventListener('input', updateInStat);
+
+  elIn.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      doFormat();
+    }
+    if (e.key === 'Tab') {                    // Tab 键插入缩进而不是跳焦点
+      e.preventDefault();
+      const s = elIn.selectionStart, t = elIn.selectionEnd;
+      elIn.value = elIn.value.slice(0, s) + '  ' + elIn.value.slice(t);
+      elIn.selectionStart = elIn.selectionEnd = s + 2;
+      updateInStat();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && document.activeElement !== elIn) {
+      e.preventDefault();
+      doFormat();
+    }
+  });
+
+  updateInStat();
+  updateOutStat();
+})();
+</script>
 </body>
 </html>
