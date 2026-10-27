@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>部署链路验证</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: grid; place-items: center;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #0f1115; color: #e6e8ee;
+  }
+  .card {
+    padding: 2.5rem 3rem; border-radius: 16px;
+    background: #171a21; border: 1px solid #262b36;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    text-align: center; max-width: 32rem;
+  }
+  h1 { margin: 0 0 .75rem; font-size: 1.5rem; letter-spacing: .02em; }
+  .ok { color: #4ade80; font-weight: 600; }
+  p { margin: .5rem 0; line-height: 1.7; color: #9aa3b2; font-size: .95rem; }
+  code {
+    background: #0f1115; padding: .15em .45em; border-radius: 5px;
+    color: #7dd3fc; font-size: .9em;
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <h1><span class="ok">✓</span> 部署链路已打通</h1>
+    <p>这个页面出现在这里，说明：本地仓库 → GitHub → Pages 三段都通了。</p>
+    <p>接下来往里塞真正的东西就行。</p>
+    <p style="margin-top:1.5rem;font-size:.8rem;opacity:.6">
+      构建于 <code id="built">-</code>
+    </p>
+  </main>
+  <script>
+    document.getElementById('built').textContent =
+      new Date(document.lastModified).toLocaleString('zh-CN');
+  </script>
+</body>
+</html>
